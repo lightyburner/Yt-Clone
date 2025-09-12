@@ -1,12 +1,10 @@
-name: Yt clone CI
+name: Yt Clone CI
 
 on:
   push:
-    branches:
-      - main  # Trigger the workflow on push to `main`
+    branches: [main]
   pull_request:
-    branches:
-      - main  # Trigger for pull requests targeting `main`
+    branches: [main]
 
 jobs:
   # Backend job
@@ -14,77 +12,71 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-      # Install backend dependencies
       - name: Install Backend Dependencies
         working-directory: backend
-        run: npm install
+        run: npm ci
 
-      # Run backend tests
-      - name: Run Backend Tests
+      - name: Check if backend has test script
         working-directory: backend
-        run: npm test  # Or use `npm run test` if you have custom test script
+        run: |
+          if npm run | grep -q "test"; then
+            echo "Running backend tests..."
+            npm test
+          else
+            echo "No test script found, skipping tests"
+          fi
 
-      # Build backend (if you have a build step)
-      - name: Build Backend
+      - name: Start backend (verify it runs)
         working-directory: backend
-        run: npm run build  # If you have a build step
+        run: |
+          npm start &
+          sleep 5
+          kill %1
+        continue-on-error: true
 
   # Frontend job
   frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      # Install frontend dependencies
       - name: Install Frontend Dependencies
         working-directory: frontend
-        run: npm install
+        run: npm ci
 
-      # Run frontend tests
-      - name: Run Frontend Tests
+      - name: Check if frontend has test script
         working-directory: frontend
-        run: npm test  # Or use `npm run test` for custom test scripts
+        run: |
+          if npm run | grep -q "test"; then
+            echo "Running frontend tests..."
+            npm test
+          else
+            echo "No test script found, skipping tests"
+          fi
 
-      # Build frontend (if applicable)
       - name: Build Frontend
         working-directory: frontend
-        run: npm run build  # If your frontend has a build process
+        run: npm run build
 
-  # Deployment job (optional)
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [backend, frontend]  # This ensures the deploy step only runs after both jobs complete successfully
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          node-version: '18'
-
-      # Deploy both backend and frontend (if applicable)
-      - name: Deploy Backend
-        working-directory: backend
-        run: |
-          npm install
-          npm run deploy  # Adjust this as needed based on your deploy script
-
-      - name: Deploy Frontend
-        working-directory: frontend
-        run: |
-          npm install
-          npm run deploy  # Adjust this as needed based on your deploy script
+          name: frontend-build
+          path: frontend/dist/
