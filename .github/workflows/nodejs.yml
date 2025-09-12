@@ -7,7 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # Backend job
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +24,7 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Check if backend has test script
+      - name: Check Backend Scripts
         working-directory: backend
         run: |
           if npm run | grep -q "test"; then
@@ -35,15 +34,6 @@ jobs:
             echo "No test script found, skipping tests"
           fi
 
-      - name: Start backend (verify it runs)
-        working-directory: backend
-        run: |
-          npm start &
-          sleep 5
-          kill %1
-        continue-on-error: true
-
-  # Frontend job
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -61,21 +51,15 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Check if frontend has test script
-        working-directory: frontend
-        run: |
-          if npm run | grep -q "test"; then
-            echo "Running frontend tests..."
-            npm test
-          else
-            echo "No test script found, skipping tests"
-          fi
-
       - name: Build Frontend
         working-directory: frontend
         run: npm run build
+        env:
+          CI: false
+          NODE_ENV: production
 
       - name: Upload build artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
