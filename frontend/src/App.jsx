@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import Dashboard from './components/Dashboard'
 //import Login from './components/login'
-import Signup from './components/signup'
+import Signup from './components/Signup'
 import Login from './components/Login'
 
 function App() {
