@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { FeedV } from './feed/FeedV'
 
 const Feed = () => {
   const { user, logout } = useAuth()
@@ -114,7 +115,7 @@ const Feed = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {videos.map((video) => (
             <div key={video.id} className="bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-colors cursor-pointer">
-              <div className="relative">
+              <div className="relative" onClick={<FeedV videoId={video.id}/>}>
                 <img
                   src={video.thumbnailUrl}
                   alt={video.title}
