@@ -1,5 +1,8 @@
 const { sequelize } = require('./database');
 const User = require('../models/User');
+const Users = require('../models/Users.model');
+const LoginLog = require('../models/loginLogs');
+const Videos = require('../models/videos');
 
 const createTables = async () => {
   try {
