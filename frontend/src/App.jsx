@@ -3,14 +3,18 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
-import Dashboard from './components/Dashboard'
-import Signup from './components/Signup'
-import Login from './components/Login'
+import Feed from './components/Feed'
+import UserProfile from './components/UserProfile'
+import NavBar from './components/NavBar'
+import Login from './components/Auth/Login'
+import Signup from './components/Auth/Signup'
+import DashboardIndex from './components/Dashboard/Index'
 
 function App() {
   return (
     <Router>
       <AuthProvider>
+        <NavBar />
         <Routes>
           {/* Public routes - only accessible when not logged in */}
           <Route 
@@ -31,20 +35,23 @@ function App() {
           />
           
           {/* Protected routes - only accessible when logged in */}
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardIndex /></ProtectedRoute>} />
+          
+          {/* Public feed */}
+          <Route path="/" element={<Feed />} />
+
+          {/* Profile management */}
           <Route 
-            path="/dashboard" 
+            path="/me" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <UserProfile />
               </ProtectedRoute>
             } 
           />
           
-          {/* Redirect root to appropriate page */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          
           {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

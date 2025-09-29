@@ -36,6 +36,7 @@ const Dashboard = () => {
             <p className="text-gray-600">
               You are successfully logged in.
             </p>
+            <div><Feed /></div>
           </div>
         </div>
       </main>

@@ -29,21 +29,11 @@ const Login = () => {
     setLoading(true)
 
     try {
-      // Replace with your API call
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        const userData = await response.json()
-        await login(userData)
+      const result = await login(formData.email, formData.password)
+      if (result.success) {
         navigate(from, { replace: true })
       } else {
-        setError('Invalid email or password')
+        setError(result.message || 'Invalid email or password')
       }
     } catch (err) {
       setError('Something went wrong. Please try again.')

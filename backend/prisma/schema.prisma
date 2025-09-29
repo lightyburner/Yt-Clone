@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         BigInt   @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  password   String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+  posts      Post[]
+  comments   Comment[]
+  likes      Like[]
+  loginLogs  LoginLog[]
+}
+
+model Post {
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt   @map("user_id")
+  content    String?  @db.Text
+  videoUrl   String?  @map("video_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id])
+  comments   Comment[]
+  likes      Like[]
+}
+
+model Comment {
+  id        BigInt   @id @default(autoincrement())
+  postId    BigInt   @map("post_id")
+  userId    BigInt   @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Like {
+  id        BigInt   @id @default(autoincrement())
+  postId    BigInt   @map("post_id")
+  userId    BigInt   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+}
+
+model LoginLog {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  action    String
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+

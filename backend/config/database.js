@@ -1,27 +1,19 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
+const env = require('./env');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-});
+const supabaseKey = env.supabaseServiceKey || env.supabaseAnonKey;
 
-// Test connection
+const supabase = createClient(
+	env.supabaseUrl,
+	supabaseKey,
+	{ auth: { persistSession: false } }
+);
+
 const testConnection = async () => {
-  try {
-    const connection = await pool.getConnection();
-    console.log('✅ Database connected successfully');
-    connection.release();
-  } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-  }
+	if (!env.supabaseUrl || !supabaseKey) {
+		throw new Error('Missing Supabase URL or API Key');
+	}
+	console.log('✅ Supabase client initialized');
 };
 
-module.exports = { pool, testConnection };
+module.exports = { supabase, testConnection };

@@ -2,13 +2,25 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+const env = require('./config/env');
 
 const { testConnection } = require('./config/database');
 const createTables = require('./config/createTables');
 
+// Environment validation
+const requiredEnvVars = ['jwtSecret'];
+const missingVars = requiredEnvVars.filter(varName => !env[varName]);
+
+if (missingVars.length > 0 && env.nodeEnv !== 'development') {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  console.log('💡 Please create a .env file with the required variables. See .env.example for reference.');
+  process.exit(1);
+}
+
+// Defaults handled in env loader
+
 const app = express();
-const port = process.env.PORT || 3000;
+const port = env.port;
 
 // Rate limiting
 const limiter = rateLimit({
@@ -21,9 +33,9 @@ const limiter = rateLimit({
 app.use(helmet());
 app.use(limiter);
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yt-clone-blond.vercel.app'] 
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: env.nodeEnv === 'production'
+    ? ['https://yt-clone-blond.vercel.app', env.frontendUrl]
+    : [env.frontendUrl, 'http://localhost:3000'],
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -40,6 +52,8 @@ app.get('/', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', require('./routes/auth'));
+// Posts routes
+app.use('/api/posts', require('./routes/posts'));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -47,7 +61,7 @@ app.get('/health', (req, res) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use( (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
@@ -65,7 +79,7 @@ const startServer = async () => {
     
     app.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌍 Environment: ${env.nodeEnv}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
