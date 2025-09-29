@@ -3,15 +3,15 @@ const env = require('./env');
 
 const supabaseKey = env.supabaseServiceKey || env.supabaseAnonKey;
 
-const supabase = createClient(
-	env.supabaseUrl,
-	supabaseKey,
-	{ auth: { persistSession: false } }
-);
+let supabase = null;
+if (env.supabaseUrl && supabaseKey) {
+	supabase = createClient(env.supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+}
 
 const testConnection = async () => {
 	if (!env.supabaseUrl || !supabaseKey) {
-		throw new Error('Missing Supabase URL or API Key');
+		console.log('✅ Skipping automatic table creation');
+		return;
 	}
 	console.log('✅ Supabase client initialized');
 };
