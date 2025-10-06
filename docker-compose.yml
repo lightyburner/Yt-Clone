@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Database service
+  database:
+    image: postgres:15-alpine
+    container_name: yt-clone-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ytclone
+      POSTGRES_USER: ytclone
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ytclone -d ytclone"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yt-clone-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://ytclone:${DB_PASSWORD:-securepassword}@database:5432/ytclone
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key}
+      JWT_EXPIRES_IN: 7d
+      PORT: 3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend service (if serving static files from backend)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: yt-clone-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      VITE_API_URL: ${API_URL:-http://localhost:3000}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: yt-clone-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
