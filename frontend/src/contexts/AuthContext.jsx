@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { getApiUrl, isDevelopment } from '../config/environment'
 
 const AuthContext = createContext()
 
@@ -11,7 +10,10 @@ export const useAuth = () => {
   return context
 }
 
-const API_URL = getApiUrl()
+const API_URL =
+  (import.meta.env.MODE === 'development')
+    ? (import.meta.env.VITE_API_URL || 'http://localhost:3000')
+    : (import.meta.env.VITE_API_URL || 'https://yt-clone-il3g.onrender.com')
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -84,8 +86,9 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json()
 
       if (response.ok) {
-        // Don't set user or token on signup - user needs to verify email first
-        return { success: true, message: data.message }
+        localStorage.setItem('token', data.token)
+        setUser({ ...data.user, token: data.token })
+        return { success: true }
       } else {
         return { success: false, message: data.message }
       }

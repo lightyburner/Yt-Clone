@@ -1,17 +1,9 @@
-const { sequelize } = require('./database');
-const User = require('../models/User');
-const Users = require('../models/Users.model');
-const LoginLog = require('../models/loginLogs');
-const Videos = require('../models/videos');
+const { supabase } = require('./database');
+require('dotenv').config();
 
 const createTables = async () => {
-  try {
-    // Sync all models
-    await sequelize.sync({ alter: true });
-    console.log('✅ Tables created successfully');
-  } catch (error) {
-    console.error('❌ Error creating tables:', error.message);
-  }
+  // Skip table creation check - Supabase handles this through dashboard
+  console.log('✅ Skipping automatic table creation');
 };
 
 module.exports = createTables;

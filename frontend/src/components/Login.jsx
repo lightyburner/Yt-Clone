@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { getApiUrl } from '../config/environment'
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -30,26 +29,11 @@ const Login = () => {
     setLoading(true)
 
     try {
-      const API_URL = getApiUrl()
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        const result = await login(formData.email, formData.password)
-        if (result.success) {
-          navigate(from, { replace: true })
-        } else {
-          setError(result.message)
-        }
+      const result = await login(formData.email, formData.password)
+      if (result.success) {
+        navigate(from, { replace: true })
       } else {
-        setError(data.message || 'Invalid email or password')
+        setError(result.message || 'Invalid email or password')
       }
     } catch (err) {
       setError('Something went wrong. Please try again.')

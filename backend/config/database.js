@@ -1,31 +1,19 @@
-const { Sequelize } = require('sequelize');
-require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
+const env = require('./env');
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: 'postgres',
-    dialectOptions: process.env.DB_SSL === 'true' ? {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    } : {},
-    logging: false,
-  }
-);
+const supabaseKey = env.supabaseServiceKey || env.supabaseAnonKey;
+
+let supabase = null;
+if (env.supabaseUrl && supabaseKey) {
+	supabase = createClient(env.supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+}
 
 const testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Database connected successfully');
-  } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-  }
+	if (!env.supabaseUrl || !supabaseKey) {
+		console.log('✅ Skipping automatic table creation');
+		return;
+	}
+	console.log('✅ Supabase client initialized');
 };
 
-module.exports = { sequelize, testConnection };
+module.exports = { supabase, testConnection };

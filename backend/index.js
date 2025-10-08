@@ -1,75 +1,90 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-require("dotenv").config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const env = require('./config/env');
 
-const { testConnection } = require("./config/database");
-const createTables = require("./config/createTables");
-const errorHandler = require("./middleware/errorHandler");
-const { testEmailConnection } = require("./services/emailService");
-const { corsMiddleware } = require("./config/cors");
-const { config, validateConfig } = require("./config/environment");
+const { testConnection } = require('./config/database');
+const createTables = require('./config/createTables');
+
+// Environment validation
+const requiredEnvVars = ['jwtSecret'];
+const missingVars = requiredEnvVars.filter(varName => !env[varName]);
+
+if (missingVars.length > 0 && env.nodeEnv !== 'development') {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  console.log('💡 Please create a .env file with the required variables. See .env.example for reference.');
+  process.exit(1);
+}
+
+// Defaults handled in env loader
 
 const app = express();
-const port = config.PORT;
+const port = env.port;
 
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests from this IP, please try again later.",
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
 });
 
+// Middleware
 app.use(helmet());
 app.use(limiter);
-// Use CORS middleware
-app.use(corsMiddleware);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cors({
+  origin: env.nodeEnv === 'production'
+    ? ['https://yt-clone-blond.vercel.app', env.frontendUrl]
+    : [env.frontendUrl, 'http://localhost:3000'],
+  credentials: true,
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.get("/", (req, res) => {
+// Routes
+app.get('/', (req, res) => {
   res.json({
-    message: "YT Clone API is running!",
-    version: "1.0.0",
-    status: "healthy",
+    message: 'YT Clone API is running!',
+    version: '1.0.0',
+    status: 'healthy',
   });
 });
-app.use("/api/auth", require("./routes/auth"));
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
-});
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+
+// Auth routes
+app.use('/api/auth', require('./routes/auth'));
+// Posts routes
+app.use('/api/posts', require('./routes/posts'));
+
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Error handling middleware (must be last)
-app.use(errorHandler);
+// 404 handler
+app.use( (req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
 
+// Error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+// Initialize database and start server
 const startServer = async () => {
   try {
-    // Validate configuration
-    validateConfig();
-    
-    // Test email connection in production
-    if (config.NODE_ENV === 'production') {
-      const emailConnected = await testEmailConnection();
-      if (!emailConnected) {
-        console.warn('⚠️ Email service connection failed, but continuing...');
-      }
-    }
-    
     await testConnection();
     await createTables();
     
     app.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
-      console.log(`🌍 Environment: ${config.NODE_ENV}`);
-      console.log(`🔗 Frontend URL: ${config.FRONTEND_URL}`);
-      console.log(`📧 Email Service: ${config.SMTP_USER ? 'Configured' : 'Not configured'}`);
+      console.log(`🌍 Environment: ${env.nodeEnv}`);
     });
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
+
 startServer();
