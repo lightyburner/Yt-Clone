@@ -253,52 +253,56 @@ router.post('/signup', asyncHandler(async (req, res) => {
 // @desc    Authenticate user
 // @access  Public
 router.post('/login', asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    try {
+      const { email, password } = req.body;
 
-    // Validation
-    if (!email || !password) {
-      return badRequest(res, 'Email and password are required');
+      // Validation
+      if (!email || !password) {
+        return badRequest(res, 'Email and password are required');
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return badRequest(res, 'Invalid email format');
+      }
+
+      // Check if user exists
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        return badRequest(res, 'Invalid credentials');
+      }
+
+      // Check if email is verified
+      if (!user.isVerified) {
+        return badRequest(res, 'Please verify your email before logging in. Check your email for verification link.');
+      }
+
+      // Check password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return badRequest(res, 'Invalid credentials');
+      }
+
+      // Generate token
+      const token = generateToken(user.id);
+
+      // Record login log with IP
+      const ip = getClientIP(req);
+      await prisma.loginLog.create({ data: { userId: BigInt(user.id), action: 'login', ipAddress: ip } });
+
+      return ok(res, {
+        message: 'Login successful',
+        token,
+        user: {
+          id: user.id.toString(),
+          name: user.name,
+          email: user.email,
+        },
+      });
+    } catch (error) {
+      return handlePrismaError(error, res);
     }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return badRequest(res, 'Invalid email format');
-    }
-
-    // Check if user exists
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return badRequest(res, 'Invalid credentials');
-    }
-
-    // Check if email is verified
-    if (!user.isVerified) {
-      return badRequest(res, 'Please verify your email before logging in. Check your email for verification link.');
-    }
-
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return badRequest(res, 'Invalid credentials');
-    }
-
-    // Generate token
-    const token = generateToken(user.id);
-
-    // Record login log with IP
-    const ip = getClientIP(req);
-    await prisma.loginLog.create({ data: { userId: BigInt(user.id), action: 'login', ipAddress: ip } });
-
-    return ok(res, {
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id.toString(),
-        name: user.name,
-        email: user.email,
-      },
-    });
   }))
 
 // @route   GET /api/auth/me
@@ -306,7 +310,32 @@ router.post('/login', asyncHandler(async (req, res) => {
 // @access  Private
 router.get('/me', auth, (req, res) => ok(res, { user: req.user }));
 
-// Test endpoint removed - IP logging is now working correctly
+// @route   GET /api/auth/debug
+// @desc    Debug endpoint for production issues (temporary)
+// @access  Public
+router.get('/debug', asyncHandler(async (req, res) => {
+  try {
+    // Test database connection
+    const userCount = await prisma.user.count();
+    const loginLogCount = await prisma.loginLog.count();
+    
+    return ok(res, {
+      message: 'Debug info',
+      database: {
+        connected: true,
+        userCount,
+        loginLogCount
+      },
+      environment: {
+        nodeEnv: process.env.NODE_ENV,
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        hasDatabaseUrl: !!process.env.DATABASE_URL
+      }
+    });
+  } catch (error) {
+    return serverError(res, `Database connection failed: ${error.message}`);
+  }
+}));
 
 // @route   POST /api/auth/logout
 // @desc    Logout and record ip
