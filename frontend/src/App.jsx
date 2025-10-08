@@ -10,6 +10,9 @@ import VideoUpload from './components/VideoUpload'
 import UserProfile from './components/UserProfile'
 import Login from './components/Auth/Login'
 import Signup from './components/Auth/Signup'
+import ForgotPassword from './components/Auth/ForgotPassword'
+import ResetPassword from './components/Auth/ResetPassword'
+import VerifyEmail from './components/VerifyEmail'
 import DashboardIndex from './components/Dashboard/Index'
 
 function App() {
@@ -36,6 +39,30 @@ function App() {
                   element={
                     <PublicRoute>
                       <Signup />
+                    </PublicRoute>
+                  } 
+                />
+                <Route 
+                  path="/forgot-password" 
+                  element={
+                    <PublicRoute>
+                      <ForgotPassword />
+                    </PublicRoute>
+                  } 
+                />
+                <Route 
+                  path="/reset-password" 
+                  element={
+                    <PublicRoute>
+                      <ResetPassword />
+                    </PublicRoute>
+                  } 
+                />
+                <Route 
+                  path="/verify-email" 
+                  element={
+                    <PublicRoute>
+                      <VerifyEmail />
                     </PublicRoute>
                   } 
                 />

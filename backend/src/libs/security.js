@@ -14,7 +14,7 @@ function buildCorsOrigin() {
   if (env.nodeEnv === 'production') {
     return ['https://yt-clone-blond.vercel.app', env.frontendUrl].filter(Boolean);
   }
-  return [env.frontendUrl, 'http://localhost:3000','http://192.168.30.5:5174'].filter(Boolean);
+  return [env.frontendUrl, 'http://localhost:3000','http://192.168.30.5:5174','http://192.168.30.5:5175'].filter(Boolean);
 }
 
 module.exports = { applyRateLimit, buildCorsOrigin };

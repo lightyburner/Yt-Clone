@@ -28,8 +28,10 @@ const Signup = () => {
 			})
 			const data = await res.json()
 			if (res.ok) {
-				await signup(data)
-				navigate('/dashboard')
+				// Show success message and redirect to verification page
+				setError('')
+				alert('Account created successfully! Please check your email to verify your account before logging in.')
+				navigate('/verify-email')
 			} else {
 				setError(data.message || 'Failed to create account')
 			}

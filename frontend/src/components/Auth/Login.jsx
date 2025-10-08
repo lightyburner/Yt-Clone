@@ -63,7 +63,10 @@ const Login = () => {
 						</button>
 					</form>
 
-					<div className="mt-6 text-center">
+					<div className="mt-6 text-center space-y-3">
+						<Link to="/forgot-password" className="block text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+							Forgot your password?
+						</Link>
 						<p className="text-gray-400">Don't have an account? <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">Sign up</Link></p>
 					</div>
 				</div>

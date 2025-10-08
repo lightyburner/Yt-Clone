@@ -3,26 +3,29 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  name       String
-  email      String   @unique
-  password   String
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @map("updated_at")
-  posts      Post[]
-  comments   Comment[]
-  likes      Like[]
-  loginLogs  LoginLog[]
+  id                      BigInt   @id @default(autoincrement())
+  name                    String
+  email                   String   @unique
+  password                String
+  isVerified              Boolean  @default(false) @map("is_verified")
+  verificationToken       String?  @map("verification_token")
+  verificationTokenExpires DateTime? @map("verification_token_expires")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @default(now()) @map("updated_at")
+  posts                   Post[]
+  comments                Comment[]
+  likes                   Like[]
+  loginLogs               LoginLog[]
 }
 
 model Post {
-  id           Int      @id @default(autoincrement())
-  userId       Int      @map("user_id")
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt   @map("user_id")
   content      String?
   videoUrl     String?  @map("video_url")
   thumbnailUrl String?  @map("thumbnail_url")
@@ -39,9 +42,9 @@ model Post {
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
-  postId    Int      @map("post_id")
-  userId    Int      @map("user_id")
+  id        BigInt   @id @default(autoincrement())
+  postId    BigInt   @map("post_id")
+  userId    BigInt   @map("user_id")
   content   String
   createdAt DateTime @default(now()) @map("created_at")
   post      Post     @relation(fields: [postId], references: [id])
@@ -49,9 +52,9 @@ model Comment {
 }
 
 model Like {
-  id        Int      @id @default(autoincrement())
-  postId    Int      @map("post_id")
-  userId    Int      @map("user_id")
+  id        BigInt   @id @default(autoincrement())
+  postId    BigInt   @map("post_id")
+  userId    BigInt   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
   post      Post     @relation(fields: [postId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
@@ -60,8 +63,8 @@ model Like {
 }
 
 model LoginLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
   action    String
   ipAddress String?  @map("ip_address")
   createdAt DateTime @default(now()) @map("created_at")

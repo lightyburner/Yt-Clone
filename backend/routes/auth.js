@@ -7,6 +7,111 @@ const { ok, created, badRequest, unauthorized, serverError } = require('../utils
 const asyncHandler = require('../utils/asyncHandler');
 const auth = require('../middleware/auth');
 
+// Helper function to handle Prisma connection issues
+const handlePrismaError = (error, res) => {
+  console.error('Prisma Error:', error);
+  
+  if (error.code === 'P2021') {
+    return badRequest(res, 'Database table not found. Please contact support.');
+  }
+  
+  if (error.code === 'P1001') {
+    return serverError(res, 'Database connection failed. Please try again.');
+  }
+  
+  if (error.message && error.message.includes('prepared statement')) {
+    // Force Prisma client restart on prepared statement conflicts
+    console.log('Prepared statement conflict detected, restarting connection...');
+    return serverError(res, 'Database connection issue. Please try again.');
+  }
+  
+  return serverError(res, 'Database error occurred.');
+};
+
+// Helper function to extract client IP address
+const getClientIP = (req) => {
+  // Check various headers that might contain the real IP
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  const xRealIP = req.headers['x-real-ip'];
+  const cfConnectingIP = req.headers['cf-connecting-ip'];
+  const xClientIP = req.headers['x-client-ip'];
+  const xClusterClientIP = req.headers['x-cluster-client-ip'];
+  const xForwarded = req.headers['x-forwarded'];
+  const forwardedFor = req.headers['forwarded-for'];
+  const forwarded = req.headers['forwarded'];
+  
+  // Socket addresses
+  const socketRemoteAddress = req.socket?.remoteAddress;
+  const connectionRemoteAddress = req.connection?.remoteAddress;
+  const connectionSocketRemoteAddress = req.connection?.socket?.remoteAddress;
+  
+  // Try to extract IP from various sources
+  let ip = null;
+  
+  // Check X-Forwarded-For header (most common)
+  if (xForwardedFor) {
+    ip = xForwardedFor.toString().split(',')[0].trim();
+  }
+  // Check X-Real-IP header
+  else if (xRealIP) {
+    ip = xRealIP.toString().trim();
+  }
+  // Check Cloudflare header
+  else if (cfConnectingIP) {
+    ip = cfConnectingIP.toString().trim();
+  }
+  // Check other proxy headers
+  else if (xClientIP) {
+    ip = xClientIP.toString().trim();
+  }
+  else if (xClusterClientIP) {
+    ip = xClusterClientIP.toString().trim();
+  }
+  else if (xForwarded) {
+    ip = xForwarded.toString().trim();
+  }
+  else if (forwardedFor) {
+    ip = forwardedFor.toString().trim();
+  }
+  else if (forwarded) {
+    // Parse Forwarded header (RFC 7239)
+    const forwardedMatch = forwarded.match(/for=([^;,\s]+)/);
+    if (forwardedMatch) {
+      ip = forwardedMatch[1].replace(/"/g, '').trim();
+    }
+  }
+  // Fall back to socket addresses
+  else if (socketRemoteAddress) {
+    ip = socketRemoteAddress.toString().trim();
+  }
+  else if (connectionRemoteAddress) {
+    ip = connectionRemoteAddress.toString().trim();
+  }
+  else if (connectionSocketRemoteAddress) {
+    ip = connectionSocketRemoteAddress.toString().trim();
+  }
+  
+  // Clean up IPv6-mapped IPv4 addresses
+  if (ip && ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+  
+  // Remove IPv6 brackets if present
+  if (ip && ip.startsWith('[') && ip.includes(']')) {
+    ip = ip.substring(1, ip.indexOf(']'));
+  }
+  
+  // Default fallback
+  if (!ip || ip === '' || ip === 'undefined' || ip === 'null') {
+    ip = 'unknown';
+  }
+  
+  // Log for debugging (can be removed in production)
+  // console.log('IP Extraction Debug:', { extractedIP: ip });
+  
+  return ip;
+};
+
 const router = express.Router();
 
 // Generate JWT Token
@@ -14,7 +119,10 @@ const generateToken = (userId) => {
   const secret = env.jwtSecret || 'fallback-secret-change-in-production';
   const expiresIn = env.jwtExpiresIn || '7d';
   
-  return jwt.sign({ userId }, secret, {
+  // Convert BigInt to string for JWT
+  const userIdString = typeof userId === 'bigint' ? userId.toString() : userId;
+  
+  return jwt.sign({ userId: userIdString }, secret, {
     expiresIn,
   });
 };
@@ -23,6 +131,7 @@ const generateToken = (userId) => {
 // @desc    Register user
 // @access  Public
 router.post('/signup', asyncHandler(async (req, res) => {
+    try {
     const { name, email, password } = req.body;
 
     // Validation
@@ -54,17 +163,90 @@ router.post('/signup', asyncHandler(async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
-    const insertedUser = await prisma.user.create({ data: { name, email, password: hashedPassword } });
+    // Generate verification token
+    const verificationToken = jwt.sign({ email }, env.jwtSecret || 'fallback-secret', { expiresIn: '24h' });
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Generate token
-    const token = generateToken(insertedUser.id);
+    // Create user
+    const insertedUser = await prisma.user.create({ 
+      data: { 
+        name, 
+        email, 
+        password: hashedPassword,
+        verificationToken,
+        verificationTokenExpires
+      } 
+    });
+
+    // Send verification email
+    try {
+      const { sendMail } = require('../utils/mailer');
+      const verificationUrl = `${env.frontendUrl}/verify-email?token=${verificationToken}`;
+      
+      await sendMail({
+        to: email,
+        subject: 'Verify Your Email - YouTube Clone',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to YouTube Clone!</h1>
+            </div>
+            
+            <div style="padding: 30px; background: #f8f9fa;">
+              <h2 style="color: #333; margin-top: 0;">Hi ${name}!</h2>
+              
+              <p style="color: #666; font-size: 16px; line-height: 1.6;">
+                Thank you for signing up! To complete your registration and start using our platform, 
+                please verify your email address by clicking the button below:
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${verificationUrl}" 
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                          color: white; 
+                          padding: 15px 30px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          font-weight: bold; 
+                          display: inline-block;
+                          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                  Verify Email Address
+                </a>
+              </div>
+              
+              <p style="color: #666; font-size: 14px; line-height: 1.6;">
+                If the button doesn't work, you can also copy and paste this link into your browser:
+              </p>
+              
+              <p style="color: #667eea; font-size: 14px; word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 4px;">
+                ${verificationUrl}
+              </p>
+              
+              <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                This verification link will expire in 24 hours. If you didn't create an account, 
+                please ignore this email.
+              </p>
+            </div>
+            
+            <div style="background: #333; color: #999; padding: 20px; text-align: center; font-size: 12px;">
+              <p style="margin: 0;">© 2024 YouTube Clone. All rights reserved.</p>
+            </div>
+          </div>
+        `,
+        text: `Welcome to YouTube Clone! Please verify your email by visiting: ${verificationUrl}`,
+      });
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail signup if email fails, just log it
+    }
 
     return created(res, {
-      message: 'User created successfully',
-      token,
-      user: { id: insertedUser.id, name, email },
+        message: 'User created successfully. Please check your email to verify your account.',
+        user: { id: insertedUser.id.toString(), name, email, isVerified: false },
     });
+    } catch (error) {
+      return handlePrismaError(error, res);
+    }
   }))
 
 // @route   POST /api/auth/login
@@ -90,6 +272,11 @@ router.post('/login', asyncHandler(async (req, res) => {
       return badRequest(res, 'Invalid credentials');
     }
 
+    // Check if email is verified
+    if (!user.isVerified) {
+      return badRequest(res, 'Please verify your email before logging in. Check your email for verification link.');
+    }
+
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -100,14 +287,14 @@ router.post('/login', asyncHandler(async (req, res) => {
     const token = generateToken(user.id);
 
     // Record login log with IP
-    const ip = (req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || '').trim();
+    const ip = getClientIP(req);
     await prisma.loginLog.create({ data: { userId: BigInt(user.id), action: 'login', ipAddress: ip } });
 
     return ok(res, {
       message: 'Login successful',
       token,
       user: {
-        id: user.id,
+        id: user.id.toString(),
         name: user.name,
         email: user.email,
       },
@@ -119,29 +306,30 @@ router.post('/login', asyncHandler(async (req, res) => {
 // @access  Private
 router.get('/me', auth, (req, res) => ok(res, { user: req.user }));
 
+// Test endpoint removed - IP logging is now working correctly
+
 // @route   POST /api/auth/logout
 // @desc    Logout and record ip
 // @access  Private
 router.post('/logout', auth, asyncHandler(async (req, res) => {
-  const ip = (req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || '').trim();
+  const ip = getClientIP(req);
   await prisma.loginLog.create({ data: { userId: BigInt(req.user.id), action: 'logout', ipAddress: ip } });
   return ok(res, { message: 'Logged out' });
 }));
 
-module.exports = router;
 // @route   POST /api/auth/forgot-password
 // @desc    Send password reset email
 // @access  Public
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', asyncHandler(async (req, res) => {
 	try {
 		const { email } = req.body;
-		if (!email) return res.status(400).json({ message: 'Email is required' });
+		if (!email) return badRequest(res, 'Email is required');
 
 		const user = await prisma.user.findUnique({ where: { email }, select: { id: true, name: true, email: true } });
 
 		// Always respond success to avoid email enumeration
 		if (!user) {
-			return res.json({ message: 'If the email exists, a reset link was sent' });
+			return ok(res, { message: 'If the email exists, a reset link was sent' });
 		}
 
 		const secret = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
@@ -163,28 +351,28 @@ router.post('/forgot-password', async (req, res) => {
 			// Still return success to not leak user existence
 		}
 
-		return res.json({ message: 'If the email exists, a reset link was sent' });
+		return ok(res, { message: 'If the email exists, a reset link was sent' });
 	} catch (err) {
 		console.error('Forgot password error:', err);
-		res.status(500).json({ message: 'Server error' });
+		return serverError(res, 'Server error');
 	}
-});
+}));
 
 // @route   POST /api/auth/reset-password
 // @desc    Reset password using token
 // @access  Public
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', asyncHandler(async (req, res) => {
 	try {
 		const { token, password } = req.body;
-		if (!token || !password) return res.status(400).json({ message: 'Token and password are required' });
-		if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
+		if (!token || !password) return badRequest(res, 'Token and password are required');
+		if (password.length < 6) return badRequest(res, 'Password must be at least 6 characters');
 
 		const secret = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
 		let payload;
 		try {
 			payload = jwt.verify(token, secret);
 		} catch (e) {
-			return res.status(400).json({ message: 'Invalid or expired token' });
+			return badRequest(res, 'Invalid or expired token');
 		}
 
 		const salt = await bcrypt.genSalt(10);
@@ -192,11 +380,189 @@ router.post('/reset-password', async (req, res) => {
 
 		await prisma.user.update({ where: { id: BigInt(payload.userId) }, data: { password: hashedPassword } });
 
-		return res.json({ message: 'Password updated successfully' });
+		return ok(res, { message: 'Password updated successfully' });
 	} catch (err) {
 		console.error('Reset password error:', err);
-		res.status(500).json({ message: 'Server error' });
+		return serverError(res, 'Server error');
 	}
-});
+}));
+
+// @route   GET /api/auth/verify-email
+// @desc    Verify user email with token
+// @access  Public
+router.get('/verify-email', asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  
+  if (!token) {
+    return badRequest(res, 'Verification token is required');
+  }
+
+  try {
+    // Verify the token
+    const decoded = jwt.verify(token, env.jwtSecret || 'fallback-secret');
+    
+    // Find user by verification token
+    const user = await prisma.user.findFirst({
+      where: {
+        verificationToken: token,
+        verificationTokenExpires: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return badRequest(res, 'Invalid or expired verification token');
+    }
+
+    // Update user as verified and clear verification token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        verificationToken: null,
+        verificationTokenExpires: null
+      }
+    });
+
+    // Send welcome email
+    try {
+      const { sendMail } = require('../utils/mailer');
+      await sendMail({
+        to: user.email,
+        subject: 'Welcome to YouTube Clone! 🎉',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Welcome to YouTube Clone!</h1>
+            </div>
+            
+            <div style="padding: 30px; background: #f8f9fa;">
+              <h2 style="color: #333; margin-top: 0;">Hi ${user.name}!</h2>
+              
+              <p style="color: #666; font-size: 16px; line-height: 1.6;">
+                Your email has been successfully verified! You can now enjoy all the features of our platform.
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${env.frontendUrl}/login" 
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                          color: white; 
+                          padding: 15px 30px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          font-weight: bold; 
+                          display: inline-block;
+                          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                  Go to Login
+                </a>
+              </div>
+              
+              <p style="color: #666; font-size: 14px; line-height: 1.6;">
+                Thank you for joining us! We're excited to have you on board.
+              </p>
+            </div>
+          </div>
+        `,
+        text: `Welcome to YouTube Clone! Your email has been verified. You can now login at ${env.frontendUrl}/login`
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+    }
+
+    return ok(res, {
+      message: 'Email verified successfully! You can now login.',
+      user: { id: user.id, name: user.name, email: user.email, isVerified: true }
+    });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return badRequest(res, 'Verification token has expired. Please request a new one.');
+    }
+    return badRequest(res, 'Invalid verification token');
+  }
+}));
+
+// @route   POST /api/auth/resend-verification
+// @desc    Resend verification email
+// @access  Public
+router.post('/resend-verification', asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return badRequest(res, 'Email is required');
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    return ok(res, { message: 'If the email exists, a verification email has been sent.' });
+  }
+
+  if (user.isVerified) {
+    return badRequest(res, 'Email is already verified');
+  }
+
+  // Generate new verification token
+  const verificationToken = jwt.sign({ email }, env.jwtSecret || 'fallback-secret', { expiresIn: '24h' });
+  const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  // Update user with new token
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      verificationToken,
+      verificationTokenExpires
+    }
+  });
+
+  // Send verification email
+  try {
+    const { sendMail } = require('../utils/mailer');
+    const verificationUrl = `${env.frontendUrl}/verify-email?token=${verificationToken}`;
+    
+    await sendMail({
+      to: email,
+      subject: 'Verify Your Email - YouTube Clone',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Verify Your Email</h1>
+          </div>
+          
+          <div style="padding: 30px; background: #f8f9fa;">
+            <h2 style="color: #333; margin-top: 0;">Hi ${user.name}!</h2>
+            
+            <p style="color: #666; font-size: 16px; line-height: 1.6;">
+              Please verify your email address by clicking the button below:
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; 
+                        padding: 15px 30px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: bold; 
+                        display: inline-block;
+                        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                Verify Email Address
+              </a>
+            </div>
+            
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">
+              This verification link will expire in 24 hours.
+            </p>
+          </div>
+        </div>
+      `,
+      text: `Please verify your email by visiting: ${verificationUrl}`
+    });
+  } catch (emailError) {
+    console.error('Failed to send verification email:', emailError);
+    return serverError(res, 'Failed to send verification email');
+  }
+
+  return ok(res, { message: 'Verification email sent successfully. Please check your email.' });
+}));
 
 module.exports = router;
