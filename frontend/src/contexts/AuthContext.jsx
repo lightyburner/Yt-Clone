@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         return { success: false, message: data.message }
       }
-    } catch (error) {
+    } catch {
       return { success: false, message: 'Network error. Please try again.' }
     }
   }
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         return { success: false, message: data.message }
       }
-    } catch (error) {
+    } catch {
       return { success: false, message: 'Network error. Please try again.' }
     }
   }

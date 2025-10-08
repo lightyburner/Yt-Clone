@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 const ForgotPassword = () => {
 	const [email, setEmail] = useState('')
@@ -7,7 +7,6 @@ const ForgotPassword = () => {
 	const [error, setError] = useState('')
 	const [loading, setLoading] = useState(false)
 
-	const navigate = useNavigate()
 
 	const handleSubmit = async (e) => {
 		e.preventDefault()

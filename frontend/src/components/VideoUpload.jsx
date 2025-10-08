@@ -76,7 +76,7 @@ const VideoUpload = () => {
       } else {
         setError(result.message || 'Upload failed')
       }
-    } catch (error) {
+    } catch {
       setError('Network error. Please try again.')
     } finally {
       setUploading(false)
