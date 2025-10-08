@@ -18,7 +18,7 @@ const Feed = () => {
 				const data = await res.json()
 				if (res.ok) setPosts(data.posts || [])  
 				else setError(data.message || 'Failed to load feed')
-			} catch (e) {
+			} catch {
 				setError('Network error')
 			} finally {
 				setLoading(false)

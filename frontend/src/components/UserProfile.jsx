@@ -19,7 +19,7 @@ const UserProfile = () => {
 			setLoading(false)
 		}
 		load()
-	}, [user])
+	}, [user, apiBase])
 
 	const deletePost = async (id) => {
 		const res = await fetch(`${apiBase}/api/posts/${id}`, {

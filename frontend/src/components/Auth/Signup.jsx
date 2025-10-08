@@ -35,7 +35,7 @@ const Signup = () => {
 			} else {
 				setError(data.message || 'Failed to create account')
 			}
-		} catch (err) {
+		} catch {
 			setError('Something went wrong. Please try again.')
 		} finally {
 			setLoading(false)

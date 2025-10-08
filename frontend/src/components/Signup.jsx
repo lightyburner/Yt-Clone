@@ -55,7 +55,7 @@ const Signup = () => {
         const errorData = await response.json()
         setError(errorData.message || 'Failed to create account')
       }
-    } catch (err) {
+    } catch {
       setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
