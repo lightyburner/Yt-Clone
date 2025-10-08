@@ -11,11 +11,11 @@ COPY frontend/package*.json ./frontend/
 
 # Install backend dependencies
 WORKDIR /app/backend
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production
 
 # Install frontend dependencies
 WORKDIR /app/frontend
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production
 
 # Build stage
 FROM base AS builder

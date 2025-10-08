@@ -17,10 +17,5 @@
   ],
   "env": {
     "VITE_API_URL": "https://yt-clone-il3g.onrender.com"
-  },
-  "functions": {
-    "app/api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
   }
 }
