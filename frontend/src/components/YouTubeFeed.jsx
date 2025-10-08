@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { API_URL } from '../config/api'
 import VideoCard from './VideoCard'
 
 const YouTubeFeed = () => {
@@ -16,8 +17,7 @@ const YouTubeFeed = () => {
     setError('')
     setLoading(true)
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-      const res = await fetch(`${apiBase}/api/posts`)
+      const res = await fetch(`${API_URL}/api/posts`)
       const data = await res.json()
       
       if (res.ok) {
@@ -44,8 +44,9 @@ const YouTubeFeed = () => {
         setError(data.message || 'Failed to load videos')
       }
     } catch (e) {
-      setError('Network error')
+      setError('Network error - Please check your connection')
       console.error('Error loading videos:', e)
+      setVideos([])
     } finally {
       setLoading(false)
     }
@@ -53,8 +54,7 @@ const YouTubeFeed = () => {
 
   const handleLike = async (videoId) => {
     try {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-      await fetch(`${apiBase}/api/posts/${videoId}/like`, {
+      await fetch(`${API_URL}/api/posts/${videoId}/like`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -17,7 +17,12 @@ export const AuthProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
       })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Token validation failed')
+        }
+        return res.json()
+      })
       .then(data => {
         if (data.user) {
           setUser({ ...data.user, token })
@@ -25,7 +30,8 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('token')
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.warn('Token validation failed:', error.message)
         localStorage.removeItem('token')
       })
       .finally(() => {
