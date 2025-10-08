@@ -135,9 +135,16 @@ jobs:
 
       - name: Run Database Migrations
         working-directory: backend
-        run: npx prisma migrate deploy
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "⚠️ DATABASE_URL not set, skipping database migration"
+            echo "Please set DATABASE_URL secret in repository settings"
+            exit 0
+          fi
+          echo "🔄 Running database migrations..."
+          npx prisma migrate deploy
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   # Deploy to production
   deploy-production:
