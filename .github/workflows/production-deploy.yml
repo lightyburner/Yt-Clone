@@ -35,9 +35,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       # Backend setup and test
+      - name: Cache Backend Dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-backend-node-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-node-
+
       - name: Install Backend Dependencies
         working-directory: backend
         run: npm ci
@@ -56,6 +63,14 @@ jobs:
           fi
 
       # Frontend setup and test
+      - name: Cache Frontend Dependencies
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-frontend-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-node-
+
       - name: Install Frontend Dependencies
         working-directory: frontend
         run: npm ci
@@ -125,8 +140,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+
+      - name: Cache Backend Dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-backend-node-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-node-
 
       - name: Install Backend Dependencies
         working-directory: backend
