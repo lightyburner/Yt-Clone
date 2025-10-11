@@ -17,6 +17,7 @@ import VerifyEmail from './components/VerifyEmail'
 import DashboardIndex from './components/Dashboard/Index'
 import LoadingScreen from './components/common/LoadingScreen'
 import TestComponent from './components/TestComponent'
+import MinimalApp from './components/MinimalApp'
 
 // Error boundary component for production debugging
 class ErrorBoundary extends React.Component {
@@ -109,13 +110,15 @@ function AppContent() {
     return <LoadingScreen message={loadingMessage} />
   }
 
-  return (
-    <div className="min-h-screen bg-gray-900">
-      <YouTubeHeader />
-      <div className="flex">
-        <YouTubeSidebar />
-        <main className="flex-1">
-          <Routes>
+  // Add a simple fallback if components fail to load
+  try {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <YouTubeHeader />
+        <div className="flex">
+          <YouTubeSidebar />
+          <main className="flex-1">
+            <Routes>
                 {/* Public routes - only accessible when not logged in */}
                 <Route 
                   path="/login" 
@@ -181,15 +184,41 @@ function AppContent() {
         </main>
       </div>
     </div>
-  )
+    )
+  } catch (error) {
+    console.error('AppContent render error:', error)
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white max-w-md mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-4">Loading Error</h1>
+          <p className="text-gray-400 mb-4">Unable to load the application. Please refresh the page.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    )
+  }
 }
 
 function App() {
-  // Temporary: Use TestComponent to isolate the issue
-  const useTestMode = import.meta.env.PROD && import.meta.env.VITE_TEST_MODE === 'true'
+  // Debug logging for production
+  if (import.meta.env.PROD) {
+    console.log('🚀 App starting...', {
+      mode: import.meta.env.MODE,
+      apiUrl: import.meta.env.VITE_API_URL,
+      testMode: import.meta.env.VITE_TEST_MODE
+    })
+  }
   
-  if (useTestMode) {
-    return <TestComponent />
+  // Temporary: Use minimal app to test basic functionality
+  const useMinimalMode = import.meta.env.PROD && import.meta.env.VITE_MINIMAL_MODE === 'true'
+  
+  if (useMinimalMode) {
+    return <MinimalApp />
   }
   
   return (

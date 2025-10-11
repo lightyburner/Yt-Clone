@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
         console.warn('⚠️ Auth initialization timeout - continuing anyway')
         setLoading(false)
       }
-    }, 10000) // 10 second timeout
+    }, 5000) // 5 second timeout for faster loading
 
     initializeAuth().finally(() => {
       clearTimeout(timeoutId)
