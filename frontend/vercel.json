@@ -1,14 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "routes": [
     {
       "src": "/(.*)",
@@ -16,6 +10,7 @@
     }
   ],
   "env": {
-    "VITE_API_URL": "https://yt-clone-il3g.onrender.com"
+    "VITE_API_URL": "https://yt-clone-il3g.onrender.com",
+    "VITE_TEST_MODE": "false"
   }
 }

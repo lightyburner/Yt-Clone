@@ -29,46 +29,52 @@ export const AuthProvider = ({ children }) => {
     }
 
     const initializeAuth = async () => {
-      setLoadingMessage('Checking API connection...')
-      await checkApiHealth()
-      
-      if (token) {
-        setLoadingMessage('Validating user session...')
-        // Validate token with backend
-        try {
-          const response = await fetch(`${API_URL}/api/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          
-          if (!response.ok) {
-            throw new Error(`Token validation failed: ${response.status}`)
-          }
-          
-          const data = await response.json()
-          if (data.user) {
-            setUser({ ...data.user, token })
-          } else {
-            localStorage.removeItem('token')
-          }
-        } catch (error) {
-          console.warn('Token validation failed:', error.message)
-          localStorage.removeItem('token')
-          // Log more details in production for debugging
-          if (import.meta.env.PROD) {
-            console.error('Auth error details:', {
-              error: error.message,
-              url: `${API_URL}/api/auth/me`,
-              timestamp: new Date().toISOString()
+      try {
+        setLoadingMessage('Checking API connection...')
+        await checkApiHealth()
+        
+        if (token) {
+          setLoadingMessage('Validating user session...')
+          // Validate token with backend
+          try {
+            const response = await fetch(`${API_URL}/api/auth/me`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
             })
+            
+            if (!response.ok) {
+              throw new Error(`Token validation failed: ${response.status}`)
+            }
+            
+            const data = await response.json()
+            if (data.user) {
+              setUser({ ...data.user, token })
+            } else {
+              localStorage.removeItem('token')
+            }
+          } catch (error) {
+            console.warn('Token validation failed:', error.message)
+            localStorage.removeItem('token')
+            // Log more details in production for debugging
+            if (import.meta.env.PROD) {
+              console.error('Auth error details:', {
+                error: error.message,
+                url: `${API_URL}/api/auth/me`,
+                timestamp: new Date().toISOString()
+              })
+            }
           }
         }
+        
+        setLoadingMessage('Loading complete')
+      } catch (error) {
+        console.error('Auth initialization failed:', error)
+        // Continue loading even if API is down
+      } finally {
+        setLoading(false)
       }
-      
-      setLoadingMessage('Loading complete')
-      setLoading(false)
     }
 
     // Add timeout to prevent infinite loading

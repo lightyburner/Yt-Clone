@@ -16,6 +16,7 @@ import ResetPassword from './components/Auth/ResetPassword'
 import VerifyEmail from './components/VerifyEmail'
 import DashboardIndex from './components/Dashboard/Index'
 import LoadingScreen from './components/common/LoadingScreen'
+import TestComponent from './components/TestComponent'
 
 // Error boundary component for production debugging
 class ErrorBoundary extends React.Component {
@@ -65,6 +66,44 @@ class ErrorBoundary extends React.Component {
 
 function AppContent() {
   const { loading, loadingMessage } = useAuth()
+
+  // Add error boundary for runtime errors
+  const [hasError, setHasError] = React.useState(false)
+  const [errorMessage, setErrorMessage] = React.useState('')
+
+  React.useEffect(() => {
+    // Catch any unhandled errors
+    const handleError = (error) => {
+      console.error('App Error:', error)
+      setHasError(true)
+      setErrorMessage(error.message || 'An unexpected error occurred')
+    }
+
+    window.addEventListener('error', handleError)
+    window.addEventListener('unhandledrejection', handleError)
+
+    return () => {
+      window.removeEventListener('error', handleError)
+      window.removeEventListener('unhandledrejection', handleError)
+    }
+  }, [])
+
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white max-w-md mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-4">Oops! Something went wrong</h1>
+          <p className="text-gray-400 mb-4">{errorMessage}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return <LoadingScreen message={loadingMessage} />
@@ -146,6 +185,13 @@ function AppContent() {
 }
 
 function App() {
+  // Temporary: Use TestComponent to isolate the issue
+  const useTestMode = import.meta.env.PROD && import.meta.env.VITE_TEST_MODE === 'true'
+  
+  if (useTestMode) {
+    return <TestComponent />
+  }
+  
   return (
     <ErrorBoundary>
       <Router>
