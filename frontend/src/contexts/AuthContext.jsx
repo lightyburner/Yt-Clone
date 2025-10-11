@@ -5,49 +5,83 @@ import { AuthContext } from './AuthContext.js'
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMessage, setLoadingMessage] = useState('Initializing...')
 
   // Check if user is logged in on app start
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (token) {
-      // Validate token with backend
-      fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('Token validation failed')
+    
+    // Add API health check first
+    const checkApiHealth = async () => {
+      try {
+        const healthResponse = await fetch(`${API_URL}/health`)
+        if (!healthResponse.ok) {
+          throw new Error(`API health check failed: ${healthResponse.status}`)
         }
-        return res.json()
-      })
-      .then(data => {
-        if (data.user) {
-          setUser({ ...data.user, token })
-        } else {
-          localStorage.removeItem('token')
-        }
-      })
-      .catch((error) => {
-        console.warn('Token validation failed:', error.message)
-        localStorage.removeItem('token')
-        // Log more details in production for debugging
+        console.log('✅ API health check passed')
+      } catch (error) {
+        console.error('❌ API health check failed:', error.message)
         if (import.meta.env.PROD) {
-          console.error('Auth error details:', {
-            error: error.message,
-            url: `${API_URL}/api/auth/me`,
-            timestamp: new Date().toISOString()
-          })
+          console.error('🔧 API URL being used:', API_URL)
         }
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-    } else {
+        // Don't throw here, just log the error and continue
+      }
+    }
+
+    const initializeAuth = async () => {
+      setLoadingMessage('Checking API connection...')
+      await checkApiHealth()
+      
+      if (token) {
+        setLoadingMessage('Validating user session...')
+        // Validate token with backend
+        try {
+          const response = await fetch(`${API_URL}/api/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          if (!response.ok) {
+            throw new Error(`Token validation failed: ${response.status}`)
+          }
+          
+          const data = await response.json()
+          if (data.user) {
+            setUser({ ...data.user, token })
+          } else {
+            localStorage.removeItem('token')
+          }
+        } catch (error) {
+          console.warn('Token validation failed:', error.message)
+          localStorage.removeItem('token')
+          // Log more details in production for debugging
+          if (import.meta.env.PROD) {
+            console.error('Auth error details:', {
+              error: error.message,
+              url: `${API_URL}/api/auth/me`,
+              timestamp: new Date().toISOString()
+            })
+          }
+        }
+      }
+      
+      setLoadingMessage('Loading complete')
       setLoading(false)
     }
+
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('⚠️ Auth initialization timeout - continuing anyway')
+        setLoading(false)
+      }
+    }, 10000) // 10 second timeout
+
+    initializeAuth().finally(() => {
+      clearTimeout(timeoutId)
+    })
   }, [])
 
   const login = async (email, password) => {
@@ -108,7 +142,8 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
-    loading
+    loading,
+    loadingMessage
   }
 
   return (

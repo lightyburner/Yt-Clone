@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext.jsx'
+import { useAuth } from './hooks/useAuth'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import YouTubeFeed from './components/YouTubeFeed'
@@ -14,6 +15,7 @@ import ForgotPassword from './components/Auth/ForgotPassword'
 import ResetPassword from './components/Auth/ResetPassword'
 import VerifyEmail from './components/VerifyEmail'
 import DashboardIndex from './components/Dashboard/Index'
+import LoadingScreen from './components/LoadingScreen'
 
 // Error boundary component for production debugging
 class ErrorBoundary extends React.Component {
@@ -61,17 +63,20 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function App() {
+function AppContent() {
+  const { loading, loadingMessage } = useAuth()
+
+  if (loading) {
+    return <LoadingScreen message={loadingMessage} />
+  }
+
   return (
-    <ErrorBoundary>
-      <Router>
-        <AuthProvider>
-          <div className="min-h-screen bg-gray-900">
-            <YouTubeHeader />
-            <div className="flex">
-              <YouTubeSidebar />
-              <main className="flex-1">
-                <Routes>
+    <div className="min-h-screen bg-gray-900">
+      <YouTubeHeader />
+      <div className="flex">
+        <YouTubeSidebar />
+        <main className="flex-1">
+          <Routes>
                 {/* Public routes - only accessible when not logged in */}
                 <Route 
                   path="/login" 
@@ -131,14 +136,23 @@ function App() {
                   } 
                 />
                 
-                {/* Catch all route */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
-          </div>
-        </div>
-      </AuthProvider>
-    </Router>
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </Router>
     </ErrorBoundary>
   )
 }
