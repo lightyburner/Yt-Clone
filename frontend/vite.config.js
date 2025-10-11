@@ -5,6 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/',
+  define: {
+    // Ensure production API URL is available
+    'import.meta.env.VITE_API_URL': JSON.stringify(
+      process.env.VITE_API_URL || 'https://yt-clone-il3g.onrender.com'
+    )
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

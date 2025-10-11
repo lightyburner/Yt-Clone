@@ -12,4 +12,9 @@ if (import.meta.env.PROD) {
     DEV: import.meta.env.DEV,
     PROD: import.meta.env.PROD
   })
+  
+  // Force production URL if environment variable is not set
+  if (!import.meta.env.VITE_API_URL) {
+    console.warn('⚠️ VITE_API_URL not set in environment, using fallback')
+  }
 }
