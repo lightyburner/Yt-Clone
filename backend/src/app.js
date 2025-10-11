@@ -64,7 +64,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
+app.options('/*', cors(corsOptions));
 
 // Ensure CORS headers are always set, even on errors
 app.use((req, res, next) => {
