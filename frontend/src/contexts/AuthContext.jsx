@@ -79,16 +79,19 @@ export const AuthProvider = ({ children }) => {
 
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn('⚠️ Auth initialization timeout - continuing anyway')
-        setLoading(false)
-      }
+      console.warn('⚠️ Auth initialization timeout - continuing anyway')
+      setLoading(false)
     }, 5000) // 5 second timeout for faster loading
 
     initializeAuth().finally(() => {
       clearTimeout(timeoutId)
     })
-  }, [])
+    
+    // Cleanup function
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, []) // Empty dependency array is correct - we only want this to run once on mount
 
   const login = async (email, password) => {
     try {
