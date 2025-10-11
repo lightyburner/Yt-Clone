@@ -3,8 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const routes = require('./routes');
-const notFound = require('./middleware/notFound');
-const error = require('./middleware/error');
+const { errorHandler, notFoundHandler, initErrorHandling } = require('./middleware/error');
 const { applyRateLimit } = require('./libs/security');
 
 const app = express();
@@ -13,56 +12,11 @@ const app = express();
 app.use(helmet());
 applyRateLimit(app);
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    
-    // Development: Allow all localhost origins
-    if (isDevelopment && origin.startsWith('http://localhost:')) {
-      console.log(`✅ CORS allowed origin (development): ${origin}`);
-      return callback(null, true);
-    }
-    
-    // Production: Only allow specific domains
-    const allowedOrigins = [
-      'https://yt-clone-blond.vercel.app',
-      'https://www.yt-clone-blond.vercel.app',
-      process.env.FRONTEND_URL
-    ].filter(Boolean);
-    
-    // Check for Vercel deployment patterns
-    const isVercelDeployment = origin.includes('.vercel.app');
-    const isAllowedOrigin = allowedOrigins.includes(origin);
-    
-    if (isVercelDeployment || isAllowedOrigin) {
-      console.log(`✅ CORS allowed origin (production): ${origin}`);
-      return callback(null, true);
-    } else {
-      console.log(`🔒 CORS blocked origin: ${origin}`);
-      console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📋 Allowed origins: ${allowedOrigins.join(', ')}`);
-      return callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: [
-    'Origin',
-    'X-Requested-With',
-    'Content-Type',
-    'Accept',
-    'Authorization',
-    'Cache-Control',
-    'Pragma',
-    'X-API-Key'
-  ]
-};
+// Import CORS configuration
+const { corsMiddleware } = require('./config/cors.config');
 
-app.use(cors(corsOptions));
+// Apply CORS middleware
+app.use(corsMiddleware);
 
 // Ensure CORS headers are always set, even on errors
 app.use((req, res, next) => {
@@ -92,22 +46,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api', routes);
 
 // 404 and error handlers
-app.use(notFound);
-app.use(error);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
-// Add production error logging
-if (process.env.NODE_ENV === 'production') {
-  app.use((err, req, res, next) => {
-    console.error('Production Error:', {
-      error: err.message,
-      stack: err.stack,
-      url: req.url,
-      method: req.method,
-      timestamp: new Date().toISOString()
-    });
-    next(err);
-  });
-}
+// Initialize error handling
+initErrorHandling();
 
 module.exports = app;
 

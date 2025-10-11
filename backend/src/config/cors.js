@@ -51,16 +51,11 @@ const corsOptions = {
         // Localhost patterns
         /^http:\/\/localhost:\d+$/,
         /^https:\/\/localhost:\d+$/,
-        /^http:\/\/127\.0\.0\.1:\d+$/,
-        /^https:\/\/127\.0\.0\.1:\d+$/,
         
         // Private network ranges
         /^http:\/\/192\.168\.\d+\.\d+:\d+$/,  // 192.168.x.x
         /^https:\/\/192\.168\.\d+\.\d+:\d+$/, // 192.168.x.x (HTTPS)
-        /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,   // 10.x.x.x
-        /^https:\/\/10\.\d+\.\d+\.\d+:\d+$/,  // 10.x.x.x (HTTPS)
-        /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:\d+$/,  // 172.16-31.x.x
-        /^https:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:\d+$/, // 172.16-31.x.x (HTTPS)
+       
         
         // Custom development origins from environment
         ...(process.env.DEVELOPMENT_ORIGINS ? 

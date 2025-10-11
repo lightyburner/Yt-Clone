@@ -2,11 +2,15 @@ const app = require('./app');
 const env = require('./config/env');
 const { testConnection } = require('./config/database');
 const createTables = require('./config/createTables');
+const { initErrorHandling } = require('./middleware/error');
 
 const port = env.port;
 
 const startServer = async () => {
   try {
+    // Initialize error handling
+    initErrorHandling();
+
     // Validate required environment variables
     const requiredEnvVars = ['jwtSecret'];
     const missingVars = requiredEnvVars.filter(varName => !env[varName]);
