@@ -20,10 +20,9 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
-      // Production Vercel URLs
+      // Production Vercel URLs - include all possible patterns
       'https://yt-clone-blond.vercel.app',
-      'https://yt-clone-git-main-lighty7s-projects.vercel.app',
-      'https://yt-clone-lighty7s-projects.vercel.app',
+      'https://www.yt-clone-blond.vercel.app',
       // Development URLs
       'http://localhost:3000',
       'http://localhost:5173',
@@ -33,16 +32,18 @@ const corsOptions = {
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
-    // Check for Vercel deployment patterns
-    const isVercelDeployment = origin.includes('.vercel.app') && origin.includes('yt-clone');
+    // Check for Vercel deployment patterns (more flexible matching)
+    const isVercelDeployment = origin.includes('.vercel.app');
     const isAllowedOrigin = allowedOrigins.includes(origin);
+    const isLocalhost = origin.startsWith('http://localhost:');
     
-    if (isVercelDeployment || isAllowedOrigin) {
+    if (isVercelDeployment || isAllowedOrigin || (isLocalhost && process.env.NODE_ENV !== 'production')) {
       console.log(`✅ CORS allowed origin: ${origin}`);
       return callback(null, true);
     } else {
       console.log(`🔒 CORS blocked origin: ${origin}`);
       console.log(`📋 Allowed origins: ${allowedOrigins.join(', ')}`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
       return callback(new Error('Not allowed by CORS'));
     }
   },
@@ -55,7 +56,8 @@ const corsOptions = {
     'Accept',
     'Authorization',
     'Cache-Control',
-    'Pragma'
+    'Pragma',
+    'X-API-Key'
   ]
 };
 
@@ -82,6 +84,20 @@ app.use('/api', routes);
 // 404 and error handlers
 app.use(notFound);
 app.use(error);
+
+// Add production error logging
+if (process.env.NODE_ENV === 'production') {
+  app.use((err, req, res, next) => {
+    console.error('Production Error:', {
+      error: err.message,
+      stack: err.stack,
+      url: req.url,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
+    next(err);
+  });
+}
 
 module.exports = app;
 
