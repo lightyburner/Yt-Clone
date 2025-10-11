@@ -1,5 +1,5 @@
 const rateLimit = require('express-rate-limit');
-const env = require('../../config/env');
+const env = require('../config/env');
 
 function applyRateLimit(app) {
   const limiter = rateLimit({

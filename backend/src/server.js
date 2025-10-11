@@ -1,7 +1,7 @@
 const app = require('./app');
-const env = require('../config/env');
-const { testConnection } = require('../config/database');
-const createTables = require('../config/createTables');
+const env = require('./config/env');
+const { testConnection } = require('./config/database');
+const createTables = require('./config/createTables');
 
 const port = env.port;
 

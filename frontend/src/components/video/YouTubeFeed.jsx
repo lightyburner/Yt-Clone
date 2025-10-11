@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
-import { API_URL } from '../config/api'
+import { useAuth } from '../../hooks/useAuth'
+import { API_URL } from '../../config/api'
 import VideoCard from './VideoCard'
 
 const YouTubeFeed = () => {
