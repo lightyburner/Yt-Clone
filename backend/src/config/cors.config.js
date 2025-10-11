@@ -29,7 +29,8 @@ const isDevelopmentOrigin = (origin) => {
     return origin && (
       origin.startsWith('http://localhost:') ||
       origin.startsWith('https://localhost:') ||
-      origin.includes('127.0.0.1')
+      origin.includes('127.0.0.1') ||
+      origin.includes('192.168.')
     );
   }
   return false;

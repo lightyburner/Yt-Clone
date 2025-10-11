@@ -1,11 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../config/prisma');
 const { sendVerificationEmail } = require('../services/emailService');
 const env = require('../config/env');
-
-const prisma = new PrismaClient();
 
 /**
  * Authentication Controller

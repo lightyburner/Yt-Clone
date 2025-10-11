@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   base: '/',
   define: {
-    // Ensure production API URL is available
+    // Only set production API URL if explicitly provided
     'import.meta.env.VITE_API_URL': JSON.stringify(
-      process.env.VITE_API_URL || 'https://yt-clone-il3g.onrender.com'
+      process.env.VITE_API_URL || (process.env.NODE_ENV === 'production' ? 'https://yt-clone-il3g.onrender.com' : undefined)
     )
   },
   build: {

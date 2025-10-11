@@ -248,12 +248,20 @@ npm run lint        # Run ESLint
 
 ## 🧪 Testing
 
+### Backend Tests
 ```bash
-# Backend tests
 cd backend
 npm test
+```
 
-# Frontend tests (if configured)
+The backend includes comprehensive tests for:
+- API health checks
+- CORS configuration
+- Error handling
+- Basic endpoint functionality
+
+### Frontend Tests
+```bash
 cd frontend
 npm test
 ```
