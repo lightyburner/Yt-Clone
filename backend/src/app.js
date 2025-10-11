@@ -19,31 +19,32 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    // Development: Allow all localhost origins
+    if (isDevelopment && origin.startsWith('http://localhost:')) {
+      console.log(`✅ CORS allowed origin (development): ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Production: Only allow specific domains
     const allowedOrigins = [
-      // Production Vercel URLs - include all possible patterns
       'https://yt-clone-blond.vercel.app',
       'https://www.yt-clone-blond.vercel.app',
-      // Development URLs
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:5175',
-      // Custom frontend URL from environment
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
-    // Check for Vercel deployment patterns (more flexible matching)
+    // Check for Vercel deployment patterns
     const isVercelDeployment = origin.includes('.vercel.app');
     const isAllowedOrigin = allowedOrigins.includes(origin);
-    const isLocalhost = origin.startsWith('http://localhost:');
     
-    if (isVercelDeployment || isAllowedOrigin || (isLocalhost && process.env.NODE_ENV !== 'production')) {
-      console.log(`✅ CORS allowed origin: ${origin}`);
+    if (isVercelDeployment || isAllowedOrigin) {
+      console.log(`✅ CORS allowed origin (production): ${origin}`);
       return callback(null, true);
     } else {
       console.log(`🔒 CORS blocked origin: ${origin}`);
+      console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`📋 Allowed origins: ${allowedOrigins.join(', ')}`);
-      console.log(`🔧 Environment: ${process.env.NODE_ENV}`);
       return callback(new Error('Not allowed by CORS'));
     }
   },
