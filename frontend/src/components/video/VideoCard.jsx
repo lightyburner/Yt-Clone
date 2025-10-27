@@ -66,15 +66,31 @@ const VideoCard = ({ video, onLike, onDislike, onComment }) => {
   return (
     <div className="bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow">
       {/* Video Thumbnail */}
-      <div className="relative aspect-video bg-gray-700 rounded-t-lg overflow-hidden">
-        {video.video_url ? (
-          <video
-            className="w-full h-full object-cover"
-            poster={video.thumbnail_url}
-            preload="metadata"
-          >
-            <source src={video.video_url} type="video/mp4" />
-          </video>
+      <div className="relative aspect-video bg-gray-700 rounded-t-lg overflow-hidden cursor-pointer group">
+        {video.videoUrl || video.video_url ? (
+          <>
+            {video.thumbnailUrl || video.thumbnail_url ? (
+              <img
+                src={video.thumbnailUrl || video.thumbnail_url}
+                alt={video.content}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <video
+                className="w-full h-full object-cover"
+                preload="metadata"
+              >
+                <source src={video.videoUrl || video.video_url} type="video/mp4" />
+              </video>
+            )}
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+              <div className="w-16 h-16 bg-black bg-opacity-70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center">
             <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
@@ -101,7 +117,7 @@ const VideoCard = ({ video, onLike, onDislike, onComment }) => {
 
           <div className="flex-1 min-w-0">
             {/* Video Title */}
-            <h3 className="font-semibold text-white line-clamp-2 mb-1">
+            <h3 className="font-semibold text-white line-clamp-2 mb-1 cursor-pointer hover:text-gray-300">
               {video.content || 'Amazing Video Title'}
             </h3>
 

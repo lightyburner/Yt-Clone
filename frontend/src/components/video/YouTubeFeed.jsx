@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { API_URL } from '../../config/api'
 import VideoCard from './VideoCard'
+import VideoPlayer from './VideoPlayer'
 
 const YouTubeFeed = () => {
   const { user } = useAuth()
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [selectedVideo, setSelectedVideo] = useState(null)
 
   useEffect(() => {
     loadVideos()
@@ -21,25 +23,7 @@ const YouTubeFeed = () => {
       const data = await res.json()
       
       if (res.ok) {
-        // Transform posts to video format for YouTube-like display
-        const videoData = data.posts.map(post => ({
-          id: post.id,
-          content: post.content,
-          video_url: post.video_url,
-          thumbnail_url: post.thumbnail_url,
-          duration: post.duration || '10:30',
-          views: post.views || Math.floor(Math.random() * 1000000),
-          likes: post.likes || Math.floor(Math.random() * 10000),
-          dislikes: post.dislikes || Math.floor(Math.random() * 100),
-          comments_count: post.comments_count || Math.floor(Math.random() * 100),
-          created_at: post.created_at,
-          user: {
-            id: post.user_id,
-            name: `User ${post.user_id}`,
-            avatar: null
-          }
-        }))
-        setVideos(videoData)
+        setVideos(data.posts || [])
       } else {
         setError(data.message || 'Failed to load videos')
       }
@@ -103,7 +87,14 @@ const YouTubeFeed = () => {
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <>
+      {selectedVideo && (
+        <VideoPlayer
+          video={selectedVideo}
+          onClose={() => setSelectedVideo(null)}
+        />
+      )}
+      <div className="bg-gray-900 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
@@ -126,13 +117,14 @@ const YouTubeFeed = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {videos.map((video) => (
-              <VideoCard
-                key={video.id}
-                video={video}
-                onLike={handleLike}
-                onDislike={handleDislike}
-                onComment={handleComment}
-              />
+              <div key={video.id} onClick={() => setSelectedVideo(video)}>
+                <VideoCard
+                  video={video}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  onComment={handleComment}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -147,6 +139,7 @@ const YouTubeFeed = () => {
         )}
       </div>
     </div>
+    </>
   )
 }
 
